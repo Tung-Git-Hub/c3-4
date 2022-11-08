@@ -1,0 +1,44 @@
+from sklearn.metrics import accuracy_score,classification_report,confusion_matrix
+import pandas as pd
+from sklearn.preprocessing import MinMaxScaler
+import numpy as np
+from sklearn.ensemble import RandomForestClassifier
+from imblearn.over_sampling import SMOTE
+#ham split train test
+def shuffle_split_data(X, y):
+    arr_rand = np.random.rand(X.shape[0])
+    split = arr_rand < np.percentile(arr_rand, 70)
+    #split = np.random.rand(X.shape[0]) < 0.7
+
+    X_Train = X[split]
+    y_Train = y[split]
+    X_Test =  X[~split]
+    y_Test = y[~split]
+    return X_Train, y_Train, X_Test, y_Test
+
+df = pd.read_csv('../pythonProject/smoke_detection_iot.csv')
+df.isnull().sum()
+df.drop(columns = ['Unnamed: 0','UTC'],axis = 1,inplace = True)
+df.drop(columns = ['NC1.0','PM1.0'],axis = 1,inplace =True)
+X=df.drop(columns = ['Fire Alarm'])
+y=df['Fire Alarm']
+scale = MinMaxScaler()
+X_scaled=pd.DataFrame(scale.fit_transform(X),columns=X.columns)
+#split data
+x_train,y_train,x_test,y_test = shuffle_split_data(X_scaled,y)
+#print(x_train,y_train,x_test,y_test)
+
+#train model và accuary tham khảo
+smote = SMOTE()
+x_train_smote, y_train_smote = smote.fit_resample(x_train, y_train)
+model=RandomForestClassifier()
+#fit model
+model.fit(x_train_smote, y_train_smote)
+y_pred_test=model.predict(x_test)
+y_pred_train=model.predict(x_train_smote)
+test_acc = accuracy_score(y_test,y_pred_test)
+train_acc = accuracy_score(y_train_smote,y_pred_train)
+print('test_acc: ', test_acc)
+print('train_acc: ', train_acc)
+print(pd.crosstab(y_test,y_pred_test))
+print(classification_report(y_test, y_pred_test))
